@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BabyStation - Thiết bị giám sát bé</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --accent-primary: #8b5cf6;
+      --accent-secondary: #ec4899;
+      --accent-success: #10b981;
+      --accent-danger: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      font-weight: 800;
+      font-size: 2.5rem;
+      background: linear-gradient(to right, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      margin-bottom: 40px;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      margin: 0 auto;
+    }
+
+    /* Diagnostics card layout removed */
+
+    .card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 30px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #c084fc;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--glass-border);
+      padding: 14px 20px;
+      border-radius: 14px;
+      color: var(--text-main);
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+    }
+
+    button {
+      padding: 14px 24px;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary) 0%, #7c3aed 100%);
+      color: white;
+      box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.4);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px 0 rgba(139, 92, 246, 0.6);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--accent-danger) 0%, #dc2626 100%);
+      color: white;
+      box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.4);
+      width: 100%;
+      padding: 18px;
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px 0 rgba(239, 68, 68, 0.6);
+      background: linear-gradient(135deg, #ff6b6b 0%, #ef4444 100%);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      box-shadow: 0 4px 14px 0 rgba(245, 158, 11 0.4);
+      width: 100%;
+      padding: 18px;
+      font-size: 1.1rem;
+    }
+
+    .btn-warning:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px 0 rgba(245, 158, 11, 0.6);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    #videoContainer {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* Mirror camera view */
+    }
+
+    .no-video {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-align: center;
+      position: absolute;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      font-size: 0.9rem;
+      margin-top: 15px;
+      align-self: flex-start;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-connected .status-dot {
+      background: var(--accent-success);
+      box-shadow: 0 0 8px var(--accent-success);
+    }
+
+    #logs {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 15px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      height: 150px;
+      overflow-y: auto;
+      color: #38bdf8;
+      margin-top: 20px;
+      width: 100%;
+      text-align: left;
+    }
+
+    .log-line {
+      margin-bottom: 4px;
+      border-left: 2px solid #0284c7;
+      padding-left: 8px;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    /* Light Theme Styling Overrides */
+    body.light-theme {
+      --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      --glass-bg: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(15, 23, 42, 0.08);
+      --text-main: #0f172a;
+      --text-muted: #475569;
+    }
+    body.light-theme input:not([type="radio"]):not([type="checkbox"]) {
+      background: rgba(255, 255, 255, 0.9);
+      color: #0f172a;
+      border: 1px solid rgba(15, 23, 42, 0.15);
+    }
+    body.light-theme input::placeholder {
+      color: #94a3b8;
+    }
+    body.light-theme #logs {
+      background: rgba(255, 255, 255, 0.85);
+      color: #0369a1;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+    }
+    body.light-theme .log-line {
+      border-left-color: #0284c7;
+    }
+    body.light-theme #videoContainer {
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(15, 23, 42, 0.1);
+    }
+    body.light-theme .card-title {
+      color: #6b21a8;
+    }
+    body.light-theme .status-badge {
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      color: #334155;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.show {
+      display: flex;
+      opacity: 1;
+    }
+    .modal-card {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      width: 90%;
+      max-width: 440px;
+      padding: 30px;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      color: #f8fafc;
+    }
+    .modal-overlay.show .modal-card {
+      transform: scale(1);
+    }
+    
+    body.light-theme .modal-card {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      color: #0f172a;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    }
+
+    .modal-header {
+      margin-bottom: 24px;
+    }
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .settings-section {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .section-label {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+    body.light-theme .section-label {
+      color: #64748b;
+    }
+    .section-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    body.light-theme .section-desc {
+      color: #64748b;
+    }
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      margin-top: 5px;
+    }
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      user-select: none;
+      color: var(--text-main);
+    }
+    .radio-label input {
+      display: none;
+    }
+    .radio-custom {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 50%;
+      display: inline-block;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    body.light-theme .radio-custom {
+      border-color: #cbd5e1;
+    }
+    .radio-label input:checked + .radio-custom {
+      border-color: var(--accent-primary);
+    }
+    .radio-custom::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      background: var(--accent-primary);
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.2s ease;
+    }
+    .radio-label input:checked + .radio-custom::after {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    
+    .toggle-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    /* Toggle switch styles */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #4b5563;
+      transition: .3s;
+    }
+    body.light-theme .slider {
+      background-color: #cbd5e1;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+    }
+    input:checked + .slider {
+      background-color: #06b6d4; /* teal matching screenshot */
+    }
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+    .slider.round {
+      border-radius: 24px;
+    }
+    .slider.round:before {
+      border-radius: 50%;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      margin-top: 24px;
+    }
+    .btn-text {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+    .btn-text:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    body.light-theme .btn-text:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: #475569;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-save:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 15px rgba(139, 92, 246, 0.4);
+    }
+    .btn-muted {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      border: 1px solid var(--glass-border);
+      transition: all 0.2s;
+      backdrop-filter: blur(4px);
+    }
+    .btn-muted:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls Header -->
+  <div style="position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; gap: 10px;">
+    <button id="settingsBtn" class="btn-muted" style="padding: 8px 14px; font-size: 0.85rem; border-radius: 10px;">
+      ⚙️ Cài đặt
+    </button>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title" data-i18n="settings_title">⚙️ Cài đặt ứng dụng</span>
+      </div>
+      <div class="modal-body">
+        <!-- Language Option -->
+        <div class="settings-section">
+          <label class="section-label" data-i18n="label_lang">Ngôn ngữ</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="langOption" value="en">
+              <span class="radio-custom"></span>
+              English
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="langOption" value="vi" checked>
+              <span class="radio-custom"></span>
+              Tiếng Việt
+            </label>
+          </div>
+        </div>
+
+
+
+        <!-- Keep Screen On Toggle -->
+        <div class="settings-section toggle-section">
+          <div style="flex: 1; padding-right: 15px;">
+            <label class="section-label" style="margin-bottom: 2px;" data-i18n="label_screen_on">Giữ màn hình luôn bật</label>
+            <p class="section-desc" data-i18n="desc_screen_on">Ngăn màn hình tắt trong khi giám sát</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="settingKeepScreenOn" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="settingsCancelBtn" class="btn-text" data-i18n="btn_cancel">HỦY</button>
+        <button id="settingsSaveBtn" class="btn-save" data-i18n="btn_save">LƯU</button>
+      </div>
+    </div>
+  </div>
+
+  <h1 data-i18n="title">BabyStation</h1>
+  <p class="subtitle" data-i18n="subtitle">Thiết bị giám sát bé tại đầu giường (Web Camera)</p>
+  
+  <div class="container">
+    <!-- Cài đặt & Video -->
+    <div class="card">
+      <div>
+        <div class="card-title">
+          <span data-i18n="config_title">⚙️ Cấu hình & Camera</span>
+        </div>
+        
+        <div class="input-group" style="display: flex; gap: 8px; width: 100%;">
+          <div style="position: relative; flex: 1; display: flex; align-items: center;">
+            <input type="password" id="babyIdInput" maxlength="6" placeholder="Nhập mã 6 chữ số" data-i18n-placeholder="baby_id_placeholder" style="width: 100%; padding-right: 75px; margin-bottom: 0;">
+            <div style="position: absolute; right: 10px; display: flex; gap: 8px; align-items: center;">
+              <button id="toggleVisibleBtn" type="button" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); width: auto; display: inline-flex;">👁️</button>
+              <button id="randomCodeBtn" type="button" style="background: transparent; border: none; padding: 4px; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); width: auto; display: inline-flex;">🎲</button>
+            </div>
+          </div>
+          <button id="connectBtn" class="btn-primary" data-i18n="connect">Kết nối</button>
+        </div>
+
+        <div id="videoContainer">
+          <div class="no-video" id="videoPlaceholder" data-i18n="video_placeholder">Camera chưa hoạt động</div>
+          <video id="localVideo" autoplay playsinline muted></video>
+          <audio id="remoteAudio" autoplay></audio>
+          <!-- Camera Overlay removed -->
+        </div>
+      </div>
+
+      <div class="status-badge" id="statusBadge">
+        <div class="status-dot"></div>
+        <span id="statusText" data-i18n="status_disconnected">Trạng thái: Chưa kết nối</span>
+      </div>
+    </div>
+
+    <!-- Simulator panel removed -->
+  </div>
+
+  <script>
+    // === Cấu hình mặc định & Khởi tạo ===
+    const defaultServerUrl = window.location.protocol.startsWith('http') 
+      ? window.location.origin 
+      : 'https://baby.thinkdiff.us';
+
+    let settings = {
+      lang: 'vi',
+      theme: 'dark',
+      serverUrl: defaultServerUrl,
+      deviceName: 'Baby Station',
+      keepScreenOn: true
+    };
+
+    let socket = null;
+    let wakeLock = null;
+
+    // Element references
+    const statusBadge = document.getElementById('statusBadge');
+    const statusText = document.getElementById('statusText');
+    const connectBtn = document.getElementById('connectBtn');
+    const babyIdInput = document.getElementById('babyIdInput');
+    const localVideo = document.getElementById('localVideo');
+    const videoPlaceholder = document.getElementById('videoPlaceholder');
+    const logsContainer = document.getElementById('logs');
+
+    // Modal elements
+    const settingsModal = document.getElementById('settingsModal');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsCancelBtn = document.getElementById('settingsCancelBtn');
+    const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+
+    let isApnea = false;
+    let sleepState = 'awake';
+    let breathingInterval = null;
+
+    let isBreathingEnabled = false;
+    let isBabyInView = true;
+    let isCalibrating = false;
+
+    let currentRoomId = '';
+    let localStream = null;
+    let peerConnection = null;
+    let currentViewerSocketId = null;
+
+    // Dịch thuật
+    const translations = {
+      vi: {
+        title: "BabyStation - Thiết bị giám sát bé",
+        subtitle: "Thiết bị giám sát bé tại đầu giường (Web Camera)",
+        config_title: "⚙️ Cấu hình & Camera",
+        baby_id_placeholder: "Nhập Room/Baby ID (Vd: 70)",
+        connect: "Kết nối",
+        video_placeholder: "Camera chưa hoạt động",
+        no_baby_alert: "🚨 KHÔNG PHÁT HIỆN BÉ",
+        status_disconnected: "Trạng thái: Chưa kết nối",
+        status_streaming: "🟢 Đang phát: Phòng ",
+        sim_title: "🚨 Bảng điều khiển giả lập",
+        sim_desc: "Nhấn các nút bên dưới để gửi tin nhắn cảnh báo tới máy Parent (điện thoại của bạn) qua Socket.IO. Hãy chạy ngầm ứng dụng Parent trên điện thoại để kiểm tra tính năng rung và chuông báo động chạy ngầm.",
+        btn_cry: "👶 GIẢ LẬP TIẾNG BÉ KHÓC",
+        btn_motion: "🏃 GIẢ LẬP CÓ CHUYỂN ĐỘNG",
+        btn_sleep_awake_awake: "👶 TRẠNG THÁI: ĐANG THỨC (Bấm để ngủ)",
+        btn_sleep_awake_sleeping: "😴 TRẠNG THÁI: ĐANG NGỦ (Bấm để thức)",
+        btn_breathing_off: "🫁 BẬT ĐO NHỊP THỞ",
+        btn_breathing_calibrating: "⏳ Đang căn chỉnh...",
+        btn_breathing_on: "🫁 TẮT ĐO NHỊP THỞ (Đang chạy)",
+        btn_apnea_off: "🫁 GIẢ LẬP NGƯNG THỞ",
+        btn_apnea_on: "🫁 NGƯNG THỞ: ĐANG GIẢ LẬP (Bấm để thở lại)",
+        btn_in_view_yes: "👶 BÉ TRONG CAMERA (Bấm để mang bé ra ngoài)",
+        btn_in_view_no: "❌ BÉ NGOÀI CAMERA (Bấm để đặt bé vào)",
+        log_ready: "Hệ thống sẵn sàng. Nhập ID phòng và bấm kết nối.",
+        settings_title: "⚙️ Cài đặt ứng dụng",
+        label_lang: "Ngôn ngữ",
+        label_theme: "Giao diện",
+        theme_light: "Chế độ sáng",
+        theme_dark: "Chế độ tối",
+        label_server: "Địa chỉ Server",
+        label_device_name: "Tên thiết bị (Vai trò Camera)",
+        label_screen_on: "Giữ màn hình luôn bật",
+        desc_screen_on: "Ngăn màn hình tắt trong khi giám sát",
+        btn_cancel: "HỦY",
+        btn_save: "LƯU",
+        dev_mode_on: "🛠️ Chế độ kỹ thuật",
+        dev_mode_off: "✕ Ẩn bảng giả lập",
+        log_camera_success: "Đã mở Webcam và Micro thành công!",
+        log_camera_fail: "LỖI: Không thể mở Webcam/Micro: ",
+        log_joining: "Đang tham gia phòng ",
+        log_webrtc_req: "Nhận được yêu cầu xem video từ: ",
+        log_webrtc_intercom: "🟢 Đang phát âm thanh đàm thoại từ máy Parent...",
+        log_sdp_offer: "Đã tạo và gửi SDP Offer",
+        log_sdp_answer: "Nhận được SDP Answer từ Viewer. Đã kết nối Remote Description thành công!",
+        log_alert_cry: "Đã phát tín hiệu Cảnh báo bé khóc!",
+        log_alert_motion: "Đã phát tín hiệu Cảnh báo chuyển động!",
+        log_sleep: "Đã gửi trạng thái: BÉ ĐANG NGỦ 😴",
+        log_awake: "Đã gửi trạng thái: BÉ ĐANG THỨC 👶",
+        log_breathing_stop: "Đã tắt đo nhịp thở.",
+        log_calibrating: "Đang căn chỉnh góc nằm của bé (3s)...",
+        log_breathing_start: "Kích hoạt đo nhịp thở thành công!",
+        log_breathing_fail: "Căn chỉnh thất bại! Vui lòng đặt bé nằm đúng góc camera.",
+        log_apnea_start: "Đã kích hoạt giả lập: BÉ NGƯNG THỞ 🚨",
+        log_apnea_stop: "Đã tắt giả lập ngưng thở. Thở bình thường 🫁",
+        log_baby_in: "Đã đặt bé vào camera (Giả lập)",
+        log_baby_out: "Đã mang bé ra khỏi camera (Giả lập)"
+      },
+      en: {
+        title: "BabyStation - Baby Camera Station",
+        subtitle: "Bedside baby monitoring device (Web Camera)",
+        config_title: "⚙️ Configuration & Camera",
+        baby_id_placeholder: "Enter Room/Baby ID (e.g. 70)",
+        connect: "Connect",
+        video_placeholder: "Camera inactive",
+        no_baby_alert: "🚨 BABY NOT DETECTED",
+        status_disconnected: "Status: Disconnected",
+        status_streaming: "🟢 Streaming: Room ",
+        sim_title: "🚨 Simulator Dashboard",
+        sim_desc: "Click buttons below to send alert messages to Parent app. Run Parent app in background on your phone to test background vibration and sirens.",
+        btn_cry: "👶 SIMULATE BABY CRYING",
+        btn_motion: "🏃 SIMULATE MOTION",
+        btn_sleep_awake_awake: "👶 STATE: AWAKE (Click to sleep)",
+        btn_sleep_awake_sleeping: "😴 STATE: SLEEPING (Click to wake)",
+        btn_breathing_off: "🫁 START BREATHING SENSOR",
+        btn_breathing_calibrating: "⏳ Calibrating...",
+        btn_breathing_on: "🫁 STOP BREATHING SENSOR (Active)",
+        btn_apnea_off: "🫁 SIMULATE APNEA",
+        btn_apnea_on: "🫁 APNEA: SIMULATING (Click to resume)",
+        btn_in_view_yes: "👶 BABY IN VIEW (Click to move out)",
+        btn_in_view_no: "❌ BABY OUT OF VIEW (Click to place in)",
+        log_ready: "System ready. Enter Room ID and click connect.",
+        settings_title: "⚙️ App Settings",
+        label_lang: "Language",
+        label_theme: "Theme",
+        theme_light: "Light Mode",
+        theme_dark: "Dark Mode",
+        label_server: "Server URL",
+        label_device_name: "Device Name (Camera role)",
+        label_screen_on: "Keep Screen On",
+        desc_screen_on: "Prevent screen from sleeping during monitoring",
+        btn_cancel: "CANCEL",
+        btn_save: "SAVE",
+        dev_mode_on: "🛠️ Technical Mode",
+        dev_mode_off: "✕ Hide simulator",
+        log_camera_success: "Webcam and Microphone successfully opened!",
+        log_camera_fail: "ERROR: Could not open Webcam/Microphone: ",
+        log_joining: "Joining room ",
+        log_webrtc_req: "Received WebRTC request from: ",
+        log_webrtc_intercom: "🟢 Streaming intercom audio from Parent...",
+        log_sdp_offer: "SDP Offer created and sent",
+        log_sdp_answer: "SDP Answer received from Viewer. Remote Description connected!",
+        log_alert_cry: "Baby cry signal dispatched!",
+        log_alert_motion: "Motion signal dispatched!",
+        log_sleep: "Sleep state sent: BABY SLEEPING 😴",
+        log_awake: "Sleep state sent: BABY AWAKE 👶",
+        log_breathing_stop: "Breathing sensor stopped.",
+        log_calibrating: "Calibrating baby orientation angle (3s)...",
+        log_breathing_start: "Breathing sensor started successfully!",
+        log_breathing_fail: "Calibration failed! Please align baby under the camera view.",
+        log_apnea_start: "Apnea simulation activated: BABY STOPPED BREATHING 🚨",
+        log_apnea_stop: "Apnea simulation stopped. Normal breathing resumed 🫁",
+        log_baby_in: "Placed baby in camera view (Simulated)",
+        log_baby_out: "Removed baby from camera view (Simulated)"
+      }
+    };
+
+    function applyLanguage(lang) {
+      const t = translations[lang] || translations['vi'];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) {
+          if (key === 'btn_sleep_awake') {
+            el.textContent = (sleepState === 'sleeping') ? t.btn_sleep_awake_sleeping : t.btn_sleep_awake_awake;
+          } else if (key === 'btn_breathing') {
+            if (isCalibrating) el.textContent = t.btn_breathing_calibrating;
+            else el.textContent = isBreathingEnabled ? t.btn_breathing_on : t.btn_breathing_off;
+          } else if (key === 'btn_apnea') {
+            el.textContent = isApnea ? t.btn_apnea_on : t.btn_apnea_off;
+          } else if (key === 'btn_in_view') {
+            el.textContent = isBabyInView ? t.btn_in_view_yes : t.btn_in_view_no;
+          } else {
+            el.textContent = t[key];
+          }
+        }
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (t[key]) el.setAttribute('placeholder', t[key]);
+      });
+      document.title = t.title;
+
+      // Dev mode button update removed
+
+      // Update statusText
+      if (!connectBtn.disabled) {
+        statusText.textContent = t.status_disconnected;
+      } else {
+        const babyId = babyIdInput.value.trim();
+        statusText.textContent = `${t.status_streaming}${babyId}`;
+      }
+    }
+
+    // Wake Lock
+    async function toggleWakeLock(enable) {
+      if (enable) {
+        if ('wakeLock' in navigator) {
+          try {
+            if (!wakeLock) {
+              wakeLock = await navigator.wakeLock.request('screen');
+              console.log('Screen Wake Lock is active');
+            }
+          } catch (err) {
+            console.warn(`Wake Lock error: ${err.message}`);
+          }
+        }
+      } else {
+        if (wakeLock) {
+          await wakeLock.release();
+          wakeLock = null;
+          console.log('Screen Wake Lock released');
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', async () => {
+      if (wakeLock !== null && document.visibilityState === 'visible' && settings.keepScreenOn) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+
+    function loadSettings() {
+      const stored = localStorage.getItem('baby_monitor_settings_baby');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          settings = { ...settings, ...parsed };
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Update UI inputs
+      document.querySelectorAll('input[name="langOption"]').forEach(radio => {
+        radio.checked = (radio.value === settings.lang);
+      });
+      settings.serverUrl = defaultServerUrl;
+      document.getElementById('settingKeepScreenOn').checked = settings.keepScreenOn;
+
+      // Apply
+
+      applyLanguage(settings.lang);
+      toggleWakeLock(settings.keepScreenOn);
+    }
+
+    function saveSettings() {
+      const lang = document.querySelector('input[name="langOption"]:checked').value;
+      const keepScreenOn = document.getElementById('settingKeepScreenOn').checked;
+
+      settings = { lang, serverUrl: defaultServerUrl, keepScreenOn };
+      localStorage.setItem('baby_monitor_settings_baby', JSON.stringify(settings));
+
+
+      applyLanguage(settings.lang);
+      toggleWakeLock(settings.keepScreenOn);
+
+      closeModal();
+    }
+
+    function openModal() {
+      loadSettings();
+      settingsModal.classList.add('show');
+    }
+
+    function closeModal() {
+      settingsModal.classList.remove('show');
+    }
+
+    // Modal listeners
+    settingsBtn.addEventListener('click', openModal);
+    settingsCancelBtn.addEventListener('click', closeModal);
+    settingsSaveBtn.addEventListener('click', saveSettings);
+
+    function addLog(message) {
+      console.log(message);
+      if (!logsContainer) return;
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      const time = new Date().toLocaleTimeString();
+      line.innerText = `[${time}] ${message}`;
+      logsContainer.appendChild(line);
+      logsContainer.scrollTop = logsContainer.scrollHeight;
+    }
+
+    function initSocket(url) {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+      const t = translations[settings.lang] || translations['vi'];
+      addLog(settings.lang === 'vi' ? `Đang kết nối tới Server: ${url}` : `Connecting to Server: ${url}`);
+      socket = io(url, { transports: ['websocket'] });
+      attachSocketListeners();
+    }
+
+    // Yêu cầu camera/mic
+    async function startCamera() {
+      const t = translations[settings.lang] || translations['vi'];
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        localVideo.srcObject = localStream;
+        videoPlaceholder.style.display = 'none';
+        addLog(t.log_camera_success);
+        return true;
+      } catch (err) {
+        addLog(t.log_camera_fail + err.message);
+        alert(settings.lang === 'vi' ? 'Vui lòng cấp quyền Webcam và Micro để chạy WebRTC!' : 'Please grant Webcam and Microphone permissions to run WebRTC!');
+        return false;
+      }
+    }
+
+    connectBtn.addEventListener('click', async () => {
+      const babyId = babyIdInput.value.trim();
+      const t = translations[settings.lang] || translations['vi'];
+      if (!babyId || babyId.length !== 6) {
+        alert(settings.lang === 'vi' ? "Vui lòng nhập đủ mã 6 chữ số!" : "Please enter a valid 6-digit Baby ID!");
+        return;
+      }
+      localStorage.setItem('baby_monitor_last_baby_id', babyId);
+      
+      const hasMedia = await startCamera();
+      if (!hasMedia) return;
+
+      currentRoomId = `baby_${babyId}`;
+      addLog(`${t.log_joining}${currentRoomId}...`);
+
+      socket.emit('join_baby_room', {
+        room: currentRoomId,
+        role: 'baby',
+        name: settings.deviceName
+      });
+
+      statusBadge.className = 'status-badge status-connected';
+      statusText.innerText = `${t.status_streaming}${babyId}`;
+      connectBtn.disabled = true;
+      babyIdInput.disabled = true;
+    });
+
+    function attachSocketListeners() {
+      const t = translations[settings.lang] || translations['vi'];
+
+      socket.on('connect', () => {
+        addLog(settings.lang === 'vi' ? `Đã kết nối tới Server: ${settings.serverUrl}` : `Connected to Server: ${settings.serverUrl}`);
+      });
+
+      // Nhận yêu cầu stream từ Parent (Điện thoại hoặc browser khác)
+      socket.on('webrtc_request_stream', async (data) => {
+        addLog(`${t.log_webrtc_req}${data.viewer_socket_id}`);
+        currentViewerSocketId = data.viewer_socket_id;
+
+        try {
+          peerConnection = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+          });
+
+          peerConnection.oniceconnectionstatechange = () => {
+            addLog(`ICE Connection State: ${peerConnection.iceConnectionState}`);
+          };
+
+          // Nhận track âm thanh từ máy Parent (Intercom) và phát ra loa máy tính
+          peerConnection.ontrack = (event) => {
+            addLog(`Nhận được remote track từ Parent: ${event.track.kind}`);
+            if (event.track.kind === 'audio') {
+              const remoteAudio = document.getElementById('remoteAudio');
+              if (remoteAudio) {
+                if (!remoteAudio.srcObject) {
+                  remoteAudio.srcObject = new MediaStream();
+                }
+                const currentStream = remoteAudio.srcObject;
+                const trackExists = currentStream.getTracks().some(t => t.id === event.track.id);
+                if (!trackExists) {
+                  currentStream.addTrack(event.track);
+                }
+                remoteAudio.play()
+                  .then(() => {
+                    addLog(t.log_webrtc_intercom, 'success');
+                  })
+                  .catch(err => {
+                    addLog(`⚠️ Autoplay blocked intercom audio: ${err.message}`);
+                  });
+              }
+            }
+          };
+
+          // Gửi ICE candidates về Viewer
+          peerConnection.onicecandidate = (event) => {
+            if (event.candidate && currentViewerSocketId) {
+              socket.emit('webrtc_ice_candidate', {
+                room: currentRoomId,
+                target_socket_id: currentViewerSocketId,
+                candidate: event.candidate
+              });
+              socket.emit('ice_candidate', {
+                room: currentRoomId,
+                target_socket_id: currentViewerSocketId,
+                candidate: event.candidate
+              });
+            }
+          };
+
+          // Add local tracks
+          localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+          });
+
+          // Tạo offer gửi đi
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+
+          addLog(t.log_sdp_offer);
+          socket.emit('webrtc_offer', {
+            room: currentRoomId,
+            viewer_socket_id: currentViewerSocketId,
+            target_socket_id: currentViewerSocketId,
+            sender_socket_id: socket.id,
+            sdp: peerConnection.localDescription
+          });
+
+        } catch (err) {
+          addLog('Lỗi khi thiết lập WebRTC: ' + err.message);
+        }
+      });
+
+      // Nhận Answer từ Viewer
+      socket.on('webrtc_answer', async (data) => {
+        addLog(t.log_sdp_answer);
+        if (peerConnection) {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        }
+      });
+
+      // Nhận ICE Candidate từ Viewer
+      socket.on('webrtc_ice_candidate', async (data) => {
+        const candidate = data?.candidate || data;
+        if (peerConnection && candidate) {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        }
+      });
+
+      socket.on('ice_candidate', async (data) => {
+        const candidate = data?.candidate || data;
+        if (peerConnection && candidate) {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        }
+      });
+    }
+
+    // Simulator listeners and Dev Mode removed
+
+    // Toggle code visibility
+    const toggleVisibleBtn = document.getElementById('toggleVisibleBtn');
+    const randomCodeBtn = document.getElementById('randomCodeBtn');
+    
+    toggleVisibleBtn.addEventListener('click', () => {
+      if (babyIdInput.type === 'password') {
+        babyIdInput.type = 'text';
+        toggleVisibleBtn.textContent = '🙈';
+      } else {
+        babyIdInput.type = 'password';
+        toggleVisibleBtn.textContent = '👁️';
+      }
+    });
+
+    randomCodeBtn.addEventListener('click', () => {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      babyIdInput.value = code;
+      localStorage.setItem('baby_monitor_last_baby_id', code);
+      addLog(`Generated random Room ID: ${code}`);
+    });
+
+    // Load initial settings and run
+    loadSettings();
+    const lastBabyId = localStorage.getItem('baby_monitor_last_baby_id') || Math.floor(100000 + Math.random() * 900000).toString();
+    babyIdInput.value = lastBabyId;
+    localStorage.setItem('baby_monitor_last_baby_id', lastBabyId);
+    initSocket(settings.serverUrl);
+  </script>
+</body>
+</html>
