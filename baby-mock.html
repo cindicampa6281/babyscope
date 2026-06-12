@@ -602,6 +602,7 @@
           <div class="no-video" id="videoPlaceholder" data-i18n="video_placeholder">Camera chưa hoạt động</div>
           <video id="localVideo" autoplay playsinline muted></video>
           <audio id="remoteAudio" autoplay></audio>
+          <audio id="lullabyAudio" loop></audio>
           <!-- Camera Overlay removed -->
         </div>
       </div>
@@ -617,9 +618,7 @@
 
   <script>
     // === Cấu hình mặc định & Khởi tạo ===
-    const defaultServerUrl = window.location.protocol.startsWith('http') 
-      ? window.location.origin 
-      : 'https://baby.thinkdiff.us';
+    const defaultServerUrl = 'https://baby.thinkdiff.us';
 
     let settings = {
       lang: 'vi',
@@ -1071,6 +1070,29 @@
         const candidate = data?.candidate || data;
         if (peerConnection && candidate) {
           await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        }
+      });
+
+      // Lullaby
+      socket.on('play_lullaby', (data) => {
+        const songId = data.song_id || 'rungu_1';
+        const lullabyAudio = document.getElementById('lullabyAudio');
+        if (lullabyAudio) {
+          lullabyAudio.src = `assets/audio/${songId}.mp3`;
+          lullabyAudio.play().then(() => {
+            addLog(`🎵 Đang phát nhạc ru: ${songId}`);
+          }).catch(err => {
+            addLog(`⚠️ Không thể tự động phát nhạc: ${err.message}`);
+          });
+        }
+      });
+
+      socket.on('stop_lullaby', () => {
+        const lullabyAudio = document.getElementById('lullabyAudio');
+        if (lullabyAudio) {
+          lullabyAudio.pause();
+          lullabyAudio.currentTime = 0;
+          addLog('🔇 Đã tắt nhạc ru');
         }
       });
     }

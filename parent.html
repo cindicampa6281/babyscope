@@ -26,14 +26,21 @@
     }
 
     body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
       background: var(--bg-gradient);
       color: var(--text-main);
-      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .main-wrapper {
+      max-width: 520px;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 40px 20px;
-      overflow-x: hidden;
     }
 
     h1 {
@@ -639,10 +646,11 @@
     </div>
   </div>
 
-  <h1 data-i18n="title">BabyMonitor</h1>
-  <p class="subtitle" data-i18n="subtitle">Hệ thống giám sát và chăm sóc bé thông minh từ xa</p>
-  
-  <div class="container">
+  <div class="main-wrapper">
+    <h1 data-i18n="title">BabyMonitor</h1>
+    <p class="subtitle" data-i18n="subtitle">Hệ thống giám sát và chăm sóc bé thông minh từ xa</p>
+    
+    <div class="container">
     <!-- Camera View & Status -->
     <div class="card">
       <div>
@@ -674,6 +682,28 @@
           <button id="speakerBtn" class="btn-success" style="flex: 1; padding: 10px 16px; font-size: 0.9rem; border-radius: 10px;" data-i18n="speaker_on">🔊 Tắt Loa</button>
         </div>
 
+        <!-- Bảng điều khiển Lullaby -->
+        <div class="control-panel" id="lullabyPanel" style="display: none; align-items: center; gap: 8px;">
+          <select id="lullabySelect" class="custom-select" style="flex: 2; padding: 10px;">
+            <option value="rungu_1">Giấc Ngủ Ngon Của Em Bé</option>
+            <option value="rungu2">Ru Con Êm Dịu</option>
+            <option value="rungu3">Hát Ru Bé Ngủ</option>
+            <option value="rungu4">Đàn Ru Bé Khó Ngủ</option>
+            <option value="rungu5">Cho Bé Nghe Nín Khóc</option>
+            <option value="rungu6">Bé Ngủ Ngon Mỗi Đêm</option>
+            <option value="rungu7">Giấc Ngủ Ngon Của Em Bé 2</option>
+          </select>
+          <button id="lullabyPlayBtn" class="btn-success" style="flex: 1; padding: 10px; border-radius: 10px;" data-i18n="lullaby_play">🎵 Phát</button>
+          <button id="lullabyStopBtn" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 10px; font-weight: bold;" data-i18n="lullaby_stop">🔇 Tắt</button>
+        </div>
+
+        <!-- Bảng điều khiển Timer -->
+        <div class="control-panel" id="timerPanel" style="display: none; align-items: center; gap: 8px;">
+          <input type="number" id="timerInput" placeholder="Số phút" min="1" max="1440" style="flex: 1; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--glass-border);">
+          <button id="timerStartBtn" class="btn-primary" style="flex: 1; padding: 10px; border-radius: 10px;" data-i18n="timer_start">⏳ Hẹn giờ</button>
+          <div id="timerDisplay" style="flex: 1; text-align: center; font-weight: bold; color: var(--accent-primary); display: none;">--:--</div>
+        </div>
+
         <!-- Baby Vitals Dashboard -->
         <div id="vitalsPanel" style="display: none; margin-top: 20px; grid-template-columns: 1fr 1fr; gap: 15px;">
           <div style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px; text-align: center;">
@@ -693,17 +723,19 @@
       </div>
     </div>
 
+    <!-- Care Log Card (Removed) -->
+
     <!-- Diagnostics card removed -->
+  </div>
   </div>
 
   <script>
     // === Cấu hình mặc định & Khởi tạo ===
-    const defaultServerUrl = window.location.protocol.startsWith('http') 
-      ? window.location.origin 
-      : 'https://baby.thinkdiff.us';
+    const defaultServerUrl = window.location.protocol.startsWith('http') ? window.location.origin : 'https://babyscope.samsungnotes.xyz';
 
     let settings = {
       lang: 'vi',
+      theme: 'dark',
       serverUrl: defaultServerUrl,
       alarmVolume: 0.4,
       snoozeDuration: 30000,
@@ -714,6 +746,7 @@
     let wakeLock = null;
     let isMonitoring = false;
     let titleFlashInterval = null;
+    let lastBabySleepState = null;
 
     // Element references
     const statusBadge = document.getElementById('statusBadge');
@@ -729,10 +762,25 @@
     const micBtn = document.getElementById('micBtn');
     const speakerBtn = document.getElementById('speakerBtn');
 
+    // Lullaby
+    const lullabyPanel = document.getElementById('lullabyPanel');
+    const lullabySelect = document.getElementById('lullabySelect');
+    const lullabyPlayBtn = document.getElementById('lullabyPlayBtn');
+    const lullabyStopBtn = document.getElementById('lullabyStopBtn');
+
+    // Timer
+    const timerPanel = document.getElementById('timerPanel');
+    const timerInput = document.getElementById('timerInput');
+    const timerStartBtn = document.getElementById('timerStartBtn');
+    const timerDisplay = document.getElementById('timerDisplay');
+    let parentTimerInterval = null;
+
     // Vitals & Alerts
     const vitalsPanel = document.getElementById('vitalsPanel');
     const vitalBreathing = document.getElementById('vitalBreathing');
     const vitalSleep = document.getElementById('vitalSleep');
+
+
     const alertOverlay = document.getElementById('alertOverlay');
     const alertTitle = document.getElementById('alertTitle');
     const alertMessage = document.getElementById('alertMessage');
@@ -796,6 +844,8 @@
         btn_save: "LƯU",
         dev_mode_on: "🛠️ Chế độ kỹ thuật",
         dev_mode_off: "✕ Ẩn nhật ký",
+        care_log_title: "📝 Nhật ký chăm sóc",
+        btn_clear_log: "Xóa",
         alert_title_emergency: "CẢNH BÁO KHẨN CẤP",
         alert_title_missing: "🚨 BÉ NGOÀI CAMERA",
         alert_title_apnea: "🚨 CẢNH BÁO NGƯNG THỞ",
@@ -845,6 +895,8 @@
         btn_save: "SAVE",
         dev_mode_on: "🛠️ Technical Mode",
         dev_mode_off: "✕ Hide logs",
+        care_log_title: "📝 Care Log",
+        btn_clear_log: "Clear",
         alert_title_emergency: "EMERGENCY ALERT",
         alert_title_missing: "🚨 BABY OUT OF VIEW",
         alert_title_apnea: "🚨 APNEA ALERT",
@@ -996,7 +1048,10 @@
       const t = translations[settings.lang] || translations['vi'];
       console.log('[Socket] Connecting to:', url);
       addLog(`${t.log_connecting}${url}`, 'info');
-      socket = io(url, { transports: ['websocket'] });
+      socket = io(url, {
+        reconnection: true,
+        transports: ['websocket']
+      });
       attachSocketListeners();
     }
 
@@ -1357,9 +1412,15 @@
         if (state === 'sleeping') {
           vitalSleep.innerText = t.sleep_state_sleeping;
           vitalSleep.style.color = '#a78bfa';
+          if (lastBabySleepState !== 'sleeping') {
+            lastBabySleepState = 'sleeping';
+          }
         } else {
           vitalSleep.innerText = t.sleep_state_awake;
           vitalSleep.style.color = '#f59e0b';
+          if (lastBabySleepState === 'sleeping' || lastBabySleepState === null) {
+            lastBabySleepState = 'awake';
+          }
         }
       });
     }
@@ -1431,6 +1492,8 @@
       addLog(`${t.log_joined}${currentRoomId}...`);
 
       controlPanel.style.display = 'flex';
+      lullabyPanel.style.display = 'flex';
+      timerPanel.style.display = 'flex';
       vitalsPanel.style.display = 'grid';
       isMicEnabled = true;
       isSpeakerEnabled = true;
@@ -1487,6 +1550,71 @@
     babyIdInput.value = lastBabyId;
     localStorage.setItem('baby_monitor_last_baby_id', lastBabyId);
     initSocket(settings.serverUrl);
+    
+    // Lullaby Logic
+    lullabyPlayBtn.addEventListener('click', () => {
+      const songId = lullabySelect.value;
+      const songName = lullabySelect.options[lullabySelect.selectedIndex].text;
+      if (socket && currentRoomId) {
+        socket.emit('play_lullaby', { room: currentRoomId, song_id: songId });
+        addLog(settings.lang === 'vi' ? `🎵 Đã gửi yêu cầu phát nhạc: ${songId}` : `🎵 Sent play lullaby request: ${songId}`, 'success');
+      }
+    });
+
+    lullabyStopBtn.addEventListener('click', () => {
+      if (socket && currentRoomId) {
+        socket.emit('stop_lullaby', { room: currentRoomId });
+        addLog(settings.lang === 'vi' ? '🔇 Đã gửi yêu cầu tắt nhạc' : '🔇 Sent stop lullaby request', 'info');
+      }
+    });
+
+    // Timer Logic
+    function updateTimerDisplay(secondsLeft) {
+      if (secondsLeft <= 0) {
+        timerDisplay.style.display = 'none';
+        timerInput.style.display = 'block';
+        timerStartBtn.style.display = 'block';
+        return;
+      }
+      const m = Math.floor(secondsLeft / 60);
+      const s = secondsLeft % 60;
+      timerDisplay.innerText = `⏳ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    timerStartBtn.addEventListener('click', () => {
+      const minutes = parseInt(timerInput.value);
+      if (isNaN(minutes) || minutes <= 0) {
+        alert(settings.lang === 'vi' ? 'Vui lòng nhập số phút hợp lệ!' : 'Please enter valid minutes!');
+        return;
+      }
+      
+      let secondsLeft = minutes * 60;
+      
+      timerInput.style.display = 'none';
+      timerStartBtn.style.display = 'none';
+      timerDisplay.style.display = 'block';
+      updateTimerDisplay(secondsLeft);
+      
+      if (parentTimerInterval) clearInterval(parentTimerInterval);
+      
+      parentTimerInterval = setInterval(() => {
+        secondsLeft--;
+        updateTimerDisplay(secondsLeft);
+        
+        if (secondsLeft <= 0) {
+          clearInterval(parentTimerInterval);
+          showAlert(
+            settings.lang === 'vi' ? '⏰ HẾT GIỜ HẸN!' : '⏰ TIMER FINISHED!',
+            settings.lang === 'vi' ? 'Đã đến giờ bạn hẹn để kiểm tra bé!' : 'It is time to check on your baby!',
+            true,
+            'timer'
+          );
+        }
+      }, 1000);
+      
+      addLog(settings.lang === 'vi' ? `⏳ Bắt đầu hẹn giờ: ${minutes} phút` : `⏳ Started timer: ${minutes} minutes`, 'success');
+    });
+
   </script>
 </body>
 </html>
