@@ -731,7 +731,7 @@
 
   <script>
     // === Cấu hình mặc định & Khởi tạo ===
-    const defaultServerUrl = window.location.protocol.startsWith('http') ? window.location.origin : 'https://babyscope.samsungnotes.xyz';
+    const defaultServerUrl = 'https://baby.thinkdiff.us';
 
     let settings = {
       lang: 'vi',
@@ -1277,11 +1277,13 @@
               socket.emit('webrtc_ice_candidate', {
                 room: currentRoomId,
                 target_socket_id: currentBabySocketId,
+                sender_socket_id: socket.id,
                 candidate: event.candidate
               });
               socket.emit('ice_candidate', {
                 room: currentRoomId,
                 target_socket_id: currentBabySocketId,
+                sender_socket_id: socket.id,
                 candidate: event.candidate
               });
             }
@@ -1294,6 +1296,7 @@
           socket.emit('webrtc_answer', {
             room: currentRoomId,
             target_socket_id: currentBabySocketId,
+            sender_socket_id: socket.id,
             sdp: peerConnection.localDescription
           });
         } catch (err) {
@@ -1517,7 +1520,7 @@
       setTimeout(() => {
         const streamReqStr = settings.lang === 'vi' ? 'Đang gửi yêu cầu stream tới Baby Station...' : 'Sending stream request to Baby Station...';
         addLog(streamReqStr);
-        socket.emit('webrtc_request_stream', { room: currentRoomId });
+        socket.emit('webrtc_request_stream', { room: currentRoomId, viewer_socket_id: socket.id });
       }, 600);
     });
 
@@ -1546,10 +1549,28 @@
 
     // Load initial settings and run
     loadSettings();
-    const lastBabyId = localStorage.getItem('baby_monitor_last_baby_id') || Math.floor(100000 + Math.random() * 900000).toString();
-    babyIdInput.value = lastBabyId;
-    localStorage.setItem('baby_monitor_last_baby_id', lastBabyId);
+    
+    // Check URL for room parameter (QR Code auto-join)
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomFromUrl = urlParams.get('room');
+    
+    let initialBabyId = roomFromUrl;
+    if (!initialBabyId) {
+      initialBabyId = localStorage.getItem('baby_monitor_last_baby_id') || Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    
+    babyIdInput.value = initialBabyId;
+    localStorage.setItem('baby_monitor_last_baby_id', initialBabyId);
     initSocket(settings.serverUrl);
+    
+    // Auto click connect if room was provided in URL
+    if (roomFromUrl) {
+      setTimeout(() => {
+        if (connectBtn && !isMonitoring) {
+          connectBtn.click();
+        }
+      }, 500);
+    }
     
     // Lullaby Logic
     lullabyPlayBtn.addEventListener('click', () => {
