@@ -23,49 +23,13 @@
       return false;
     };
 
-    // Diagnostic overlay
-    window.addEventListener('DOMContentLoaded', () => {
-      const diagDiv = document.createElement('div');
-      diagDiv.style.position = 'fixed';
-      diagDiv.style.bottom = '10px';
-      diagDiv.style.right = '10px';
-      diagDiv.style.backgroundColor = 'rgba(0,0,0,0.85)';
-      diagDiv.style.color = '#00ff00';
-      diagDiv.style.padding = '10px';
-      diagDiv.style.borderRadius = '5px';
-      diagDiv.style.zIndex = '99999';
-      diagDiv.style.fontFamily = 'monospace';
-      diagDiv.style.fontSize = '11px';
-      diagDiv.style.maxHeight = '250px';
-      diagDiv.style.overflowY = 'auto';
-      diagDiv.id = 'diag-overlay';
-      document.body.appendChild(diagDiv);
 
-      function updateDiag() {
-        const views = document.querySelectorAll('.view-section');
-        let text = '<strong>VIEWS STATUS:</strong><br>';
-        views.forEach(v => {
-          text += `- ${v.id}: display=${v.style.display}, active=${v.classList.contains('active')}<br>`;
-        });
-        const navs = document.querySelectorAll('.nav-item');
-        text += '<br><strong>NAVS STATUS:</strong><br>';
-        navs.forEach(n => {
-          text += `- ${n.innerText.trim().substring(0, 15)}: view=${n.getAttribute('data-view') || 'null'}, active=${n.classList.contains('active')}<br>`;
-        });
-        diagDiv.innerHTML = text;
-      }
-
-      updateDiag();
-      document.addEventListener('click', () => {
-        setTimeout(updateDiag, 100);
-      });
-    });
   </script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script type="module" crossorigin src="/assets/main-DR5TAwKR.js"></script>
+  <script type="module" crossorigin src="/assets/main-CkecjVyE.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/main-CKn9cUP1.css">
 </head>
 <body class="dark-theme">
