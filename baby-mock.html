@@ -953,10 +953,17 @@
       currentRoomId = `baby_${babyId}`;
       addLog(`${t.log_joining}${currentRoomId}...`);
 
+      let deviceId = localStorage.getItem('baby_monitor_device_id');
+      if (!deviceId) {
+        deviceId = 'web-baby-' + Math.random().toString(36).substring(2, 11);
+        localStorage.setItem('baby_monitor_device_id', deviceId);
+      }
+
       socket.emit('join_baby_room', {
         room: currentRoomId,
         role: 'baby',
-        name: settings.deviceName
+        name: settings.deviceName,
+        device_id: deviceId
       });
 
       statusBadge.className = 'status-badge status-connected';
@@ -970,6 +977,21 @@
 
       socket.on('connect', () => {
         addLog(settings.lang === 'vi' ? `Đã kết nối tới Server: ${settings.serverUrl}` : `Connected to Server: ${settings.serverUrl}`);
+      });
+
+      socket.on('room_join_error', (data) => {
+        addLog(`❌ Connection Error: ${data.message}`);
+        alert(data.message);
+        statusBadge.className = 'status-badge';
+        statusText.innerText = t.status_disconnected;
+        connectBtn.disabled = false;
+        babyIdInput.disabled = false;
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+          localStream = null;
+          localVideo.srcObject = null;
+          videoPlaceholder.style.display = 'block';
+        }
       });
 
       // Nhận yêu cầu stream từ Parent (Điện thoại hoặc browser khác)
